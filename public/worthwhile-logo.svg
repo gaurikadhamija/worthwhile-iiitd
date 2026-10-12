@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 340 76" fill="none" width="100%" height="100%">
+  <defs>
+    <!-- Wine gradient for the W letterform -->
+    <linearGradient id="wwWineGradL" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#6F2437" />
+      <stop offset="50%" stop-color="#551D2C" />
+      <stop offset="100%" stop-color="#3A111C" />
+    </linearGradient>
+
+    <!-- Path warm cream gradient -->
+    <linearGradient id="wwPathGradL" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#DECBB3" />
+      <stop offset="70%" stop-color="#EFE3D3" />
+      <stop offset="100%" stop-color="#FFFDF8" />
+    </linearGradient>
+
+    <filter id="wwPinShadowL" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-color="#240B12" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- EMBLEM ICON (Left aligned, x: 2 to 66, y: 2 to 74) -->
+  <g transform="translate(4, 2) scale(0.85)">
+    <!-- 3 Golden Sunburst Rays at the Top -->
+    <g stroke="#B78A4A" stroke-width="3" stroke-linecap="round">
+      <line x1="50" y1="4" x2="50" y2="12" />
+      <line x1="37" y1="8" x2="43" y2="15" />
+      <line x1="63" y1="8" x2="57" y2="15" />
+    </g>
+
+    <!-- Stylized W Silhouette -->
+    <path d="M16 24 H30 L40 68 L50 36 L60 68 L70 24 H84 L71 78 C70 80 67 81 64 81 C61 81 58 79 57 76 L50 56 L43 76 C42 79 39 81 36 81 C33 81 30 80 29 78 Z" fill="url(#wwWineGradL)" />
+
+    <!-- The Winding Campus Pathway ascending through the center of the W -->
+    <path d="M36 81 C44 80 49 71 50 54 C51 44 49 39 50 36 C52 40 54 48 53 58 C51 72 46 80 36 81 Z" fill="#F4EBDD" />
+
+    <!-- Location Map Pin / Beacon at Summit -->
+    <g filter="url(#wwPinShadowL)">
+      <path d="M50 16 C43.5 16 38.5 21 38.5 27.5 C38.5 34 46.5 44 50 47.5 C53.5 44 61.5 34 61.5 27.5 C61.5 21 56.5 16 50 16 Z" fill="url(#wwWineGradL)" stroke="#FFFDF8" stroke-width="1.5" />
+      <circle cx="50" cy="27" r="4.2" fill="#FFFDF8" />
+    </g>
+  </g>
+
+  <!-- TYPOGRAPHY WORDMARK -->
+  <!-- "WorthWhile" in prominent display serif -->
+  <text x="88" y="44" font-family="'Cormorant Garamond', Georgia, serif" font-size="36" font-weight="700" fill="#421421" letter-spacing="-0.02em">
+    WorthWhile
+  </text>
+
+  <!-- Tagline underneath -->
+  <text x="89" y="62" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-size="9.5" font-weight="600" fill="#6B5B52" letter-spacing="0.04em">
+    The right events. At the right time. For your goals.
+  </text>
+</svg>
