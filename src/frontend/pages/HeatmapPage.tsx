@@ -6,6 +6,7 @@ import { RelevanceScoreRing } from '../components/RelevanceScoreRing.js';
 import { DelhiGoogleMap, MapSelectedLocation } from '../components/DelhiGoogleMap.js';
 import { EventItem } from '../types/index.js';
 import { KNOWN_DELHI_LOCATIONS, calculateDistanceKm, calculateWalkingMinutes, CampusLocation } from '../services/locationService.js';
+import campusQuadArchImg from '../../assets/images/campus_quad_arch_1791739530548.jpg';
 
 export const HeatmapPage: React.FC = () => {
   const { navigateTo } = useApp();
@@ -251,7 +252,7 @@ export const HeatmapPage: React.FC = () => {
               <div className="space-y-6">
                 <div className="relative h-48 w-full rounded-xl overflow-hidden bg-[#E2D7C8]">
                   <img
-                    src="/src/assets/images/campus_quad_arch_1791739530548.jpg"
+                    src={campusQuadArchImg}
                     alt="Campus Quad Architecture"
                     className="w-full h-full object-cover"
                   />

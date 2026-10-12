@@ -3,6 +3,11 @@ import { ArrowRight, Sliders, Clock, ShieldCheck, ChevronLeft, ChevronRight, Pau
 import { useApp } from '../context/AppContext.js';
 import { RelevanceScoreRing } from './RelevanceScoreRing.js';
 
+import campusTechSalonImg from '../../assets/images/campus_tech_salon_1791739518311.jpg';
+import studentWorkshopImg from '../../assets/images/student_workshop_1791739542898.jpg';
+import campusQuadArchImg from '../../assets/images/campus_quad_arch_1791739530548.jpg';
+import worthwhileCoffeePreviewImg from '../../assets/images/worthwhile_coffee_preview_1791446958386.jpg';
+
 interface SpotlightSlide {
   id: string;
   badge: string;
@@ -32,7 +37,7 @@ const SPOTLIGHT_SLIDES: SpotlightSlide[] = [
     score: 94,
     skills: ['ROS2 Humble', 'Nav2', 'Occupancy Grids'],
     attendeeEvidence: '92% verified by 24 checked-in attendees',
-    image: '/src/assets/images/campus_tech_salon_1791739518311.jpg',
+    image: campusTechSalonImg,
     alt: 'Hands-on ROS2 and SLAM Workshop in Turing Hall'
   },
   {
@@ -47,7 +52,7 @@ const SPOTLIGHT_SLIDES: SpotlightSlide[] = [
     score: 96,
     skills: ['Gemini 2.5 API', 'LangGraph', 'Function Calling'],
     attendeeEvidence: '96% verified by 68 checked-in attendees',
-    image: '/src/assets/images/student_workshop_1791739542898.jpg',
+    image: studentWorkshopImg,
     alt: 'Students collaborating in an interactive AI workshop'
   },
   {
@@ -62,7 +67,7 @@ const SPOTLIGHT_SLIDES: SpotlightSlide[] = [
     score: 91,
     skills: ['Pitch Decks', 'Venture Capital', 'Angel Co-founders'],
     attendeeEvidence: '89% verified by 52 founders and scouts',
-    image: '/src/assets/images/campus_quad_arch_1791739530548.jpg',
+    image: campusQuadArchImg,
     alt: 'Campus architectural courtyard and evening mixer space'
   },
   {
@@ -77,7 +82,7 @@ const SPOTLIGHT_SLIDES: SpotlightSlide[] = [
     score: 93,
     skills: ['Python', 'Order Book Dynamics', 'Backtesting'],
     attendeeEvidence: '95% verified by 36 engineering attendees',
-    image: '/src/assets/images/worthwhile_coffee_preview_1791446958386.jpg',
+    image: worthwhileCoffeePreviewImg,
     alt: 'Evening campus lecture hall with students at work'
   }
 ];
@@ -300,6 +305,10 @@ export const HeroWine: React.FC = () => {
                       <img
                         src={slide.image}
                         alt={slide.alt}
+                        onError={(e) => {
+                          // Fallback to solid editorial brand background if image fails to render
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
                         className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                       />
                       {/* Measured Dark Contrast Scrim for WCAG readability */}

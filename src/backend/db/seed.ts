@@ -4,18 +4,17 @@ import { initializeSchema, markSeedDataAsDemo } from './schema.js';
 export function seedDatabase(force = false) {
   initializeSchema();
 
+  const isProduction = process.env.NODE_ENV === 'production';
   const userCount = (db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number }).count;
-  const hasDelhiVenue = (db.prepare("SELECT COUNT(*) as count FROM venues WHERE id = 'ven_igdtuw_kashmere'").get() as { count: number } | undefined)?.count || 0;
+  const eventCount = (db.prepare('SELECT COUNT(*) as count FROM events').get() as { count: number }).count;
   
-  if (userCount > 0 && hasDelhiVenue > 0 && !force) {
-    return; // Already seeded with full Delhi NCR campuses
+  // PRESERVE AND PROTECT: If database already contains data, do NOT clear or overwrite
+  if (userCount > 0 && eventCount > 0 && !force) {
+    return; // Already populated. Safely preserve existing production and campus records.
   }
 
-  // Force re-seed to install full Delhi NCR campuses including IGDTUW, DTU, IIT Delhi
-  force = true;
-
-  // Clear if forced
-  if (force) {
+  // Strictly forbid destructive clearing in production
+  if (force && !isProduction && process.env.ALLOW_DATABASE_RESET === 'true') {
     db.exec(`
       DELETE FROM notifications;
       DELETE FROM event_registrations;
@@ -31,6 +30,9 @@ export function seedDatabase(force = false) {
       DELETE FROM profiles;
       DELETE FROM users;
     `);
+  } else if (userCount > 0) {
+    // If table already has data and not resetting, preserve existing data without throwing duplicate key errors
+    return;
   }
 
   // 1. Seed Users

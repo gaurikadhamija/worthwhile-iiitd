@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: worthwhile-api
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: ALLOW_DEMO_IDENTITY
+        value: "false"
+      - key: WORTHWHILE_DB_PATH
+        value: ./data/campus_events.db

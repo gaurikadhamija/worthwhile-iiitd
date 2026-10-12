@@ -1,6 +1,12 @@
 import { EventItem, UserProfile, Notification, RelevanceBreakdown } from '../types/index.js';
 
-const API_BASE = '/api';
+// Supports relative /api (local Vite dev & Vercel proxy rewrites)
+// and absolute backend origins (via VITE_API_URL or VITE_API_BASE_URL in Vercel)
+const rawBase = (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || '') as string;
+const normalizedBase = rawBase.trim().replace(/\/+$/, '');
+const API_BASE = normalizedBase
+  ? (normalizedBase.endsWith('/api') ? normalizedBase : `${normalizedBase}/api`)
+  : '/api';
 
 function getAuthHeader(): Record<string, string> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('worthwhile_token') : null;
