@@ -6,7 +6,27 @@ export interface User {
   name: string;
   role: UserRole;
   avatar_url?: string;
+  status?: 'active' | 'pending_approval';
+  organization_name?: string;
   created_at: string;
+}
+
+export interface SkillItem {
+  id: string;
+  name: string;
+  category: 'technical' | 'creative' | 'leadership' | 'other';
+  proficiency: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+  evidenceUrl?: string;
+  evidenceNotes?: string;
+  isVerified?: boolean;
+  verifiedSource?: string;
+}
+
+export interface PortfolioLinks {
+  github?: string;
+  linkedin?: string;
+  website?: string;
+  twitter?: string;
 }
 
 export interface UserProfile {
@@ -20,6 +40,11 @@ export interface UserProfile {
   delhi_region?: string;
   preferred_time_of_day?: string;
   onboarding_completed?: boolean;
+  graduation_year?: string;
+  bio?: string;
+  college_email?: string;
+  portfolio_links?: PortfolioLinks;
+  skills_portfolio?: SkillItem[];
   goals: string[]; // e.g. ["Get an internship", "Learn technical skills", "Build projects"]
   interests: string[]; // e.g. ["Artificial Intelligence", "Startups", "UI/UX"]
   priorities?: {

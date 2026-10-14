@@ -12,6 +12,8 @@ export class UserService {
       name: row.name,
       role: row.role,
       avatar_url: row.avatar_url,
+      status: row.status || 'active',
+      organization_name: row.organization_name,
       created_at: row.created_at
     };
   }
@@ -30,6 +32,11 @@ export class UserService {
       delhi_region: row.delhi_region || 'South Delhi',
       preferred_time_of_day: row.preferred_time_of_day || 'Afternoon & Evening',
       onboarding_completed: Boolean(row.onboarding_completed),
+      graduation_year: row.graduation_year || '2026',
+      bio: row.bio || '',
+      college_email: row.college_email || '',
+      portfolio_links: JSON.parse(row.portfolio_links_json || '{"github":"","linkedin":"","website":""}'),
+      skills_portfolio: JSON.parse(row.skills_portfolio_json || '[]'),
       goals: JSON.parse(row.goals_json || '[]'),
       interests: JSON.parse(row.interests_json || '[]'),
       priorities: JSON.parse(row.priorities_json || '{"career":35,"learning":25,"networking":20,"convenience":10,"fun":10}'),
@@ -61,7 +68,12 @@ export class UserService {
         career_interests_json = COALESCE(?, career_interests_json),
         preferred_event_types_json = COALESCE(?, preferred_event_types_json),
         preferred_duration_max = COALESCE(?, preferred_duration_max),
-        preferred_distance_max = COALESCE(?, preferred_distance_max)
+        preferred_distance_max = COALESCE(?, preferred_distance_max),
+        graduation_year = COALESCE(?, graduation_year),
+        bio = COALESCE(?, bio),
+        college_email = COALESCE(?, college_email),
+        portfolio_links_json = COALESCE(?, portfolio_links_json),
+        skills_portfolio_json = COALESCE(?, skills_portfolio_json)
       WHERE user_id = ?
     `).run(
       updates.year_of_study ?? null,
@@ -80,6 +92,11 @@ export class UserService {
       updates.preferred_event_types ? JSON.stringify(updates.preferred_event_types) : null,
       updates.preferred_duration_max ?? null,
       updates.preferred_distance_max ?? null,
+      updates.graduation_year ?? null,
+      updates.bio ?? null,
+      updates.college_email ?? null,
+      updates.portfolio_links ? JSON.stringify(updates.portfolio_links) : null,
+      updates.skills_portfolio ? JSON.stringify(updates.skills_portfolio) : null,
       userId
     );
 
@@ -170,6 +187,56 @@ export class UserService {
       `).run(eventId, userId);
     }
     return res.changes > 0;
+  }
+
+  static cancelRegistration(userId: string, eventId: string): { success: boolean; registered: boolean } {
+    const existing = db.prepare('SELECT id FROM event_registrations WHERE user_id = ? AND event_id = ?').get(userId, eventId);
+    if (existing) {
+      db.prepare('DELETE FROM event_registrations WHERE user_id = ? AND event_id = ?').run(userId, eventId);
+      db.prepare(`
+        UPDATE event_analytics SET seats_registered = MAX(0, seats_registered - 1) WHERE event_id = ?
+      `).run(eventId);
+    }
+    return { success: true, registered: false };
+  }
+
+  /**
+   * Returns list of registered attendees for an event with student profile context
+   */
+  static getEventAttendees(eventId: string) {
+    const rows = db.prepare(`
+      SELECT er.id as registration_id, er.event_id, er.user_id, er.registered_at, er.attended, er.checked_in_at, er.attendance_source,
+             u.name, u.email, u.avatar_url,
+             p.degree, p.major, p.year_of_study, p.graduation_year, p.campus_location, p.delhi_region
+      FROM event_registrations er
+      JOIN users u ON er.user_id = u.id
+      LEFT JOIN profiles p ON u.id = p.user_id
+      WHERE er.event_id = ?
+      ORDER BY er.registered_at DESC
+    `).all(eventId) as any[];
+
+    return rows.map(r => ({
+      id: r.registration_id,
+      event_id: r.event_id,
+      user_id: r.user_id,
+      registered_at: r.registered_at,
+      attended: Boolean(r.attended),
+      checked_in_at: r.checked_in_at,
+      attendance_source: r.attendance_source,
+      name: r.name,
+      email: r.email,
+      avatar_url: r.avatar_url,
+      degree: r.degree || 'B.Tech',
+      major: r.major || 'Engineering',
+      year_of_study: r.year_of_study || 'Junior (3rd Year)',
+      graduation_year: r.graduation_year || '2026',
+      campus_location: r.campus_location || 'Campus'
+    }));
+  }
+
+  static updateSkillsPortfolio(userId: string, skills: any[]) {
+    db.prepare('UPDATE profiles SET skills_portfolio_json = ? WHERE user_id = ?').run(JSON.stringify(skills), userId);
+    return this.getProfile(userId);
   }
 
   static isEventRegistered(userId: string, eventId: string): boolean {

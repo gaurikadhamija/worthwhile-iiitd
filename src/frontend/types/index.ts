@@ -175,6 +175,53 @@ export interface EventItem {
   saved_at?: string;
 }
 
+export interface SkillItem {
+  id: string;
+  name: string;
+  category: 'technical' | 'creative' | 'leadership' | 'other';
+  proficiency: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+  evidenceUrl?: string;
+  evidenceNotes?: string;
+  isVerified?: boolean;
+  verifiedSource?: string;
+}
+
+export interface PortfolioLinks {
+  github?: string;
+  linkedin?: string;
+  website?: string;
+  twitter?: string;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  avatar_url?: string;
+  status?: 'active' | 'pending_approval';
+  organization_name?: string;
+  created_at: string;
+}
+
+export interface EventAttendee {
+  id: string;
+  event_id: string;
+  user_id: string;
+  registered_at: string;
+  attended: boolean;
+  checked_in_at?: string;
+  attendance_source?: string;
+  name: string;
+  email: string;
+  avatar_url?: string;
+  degree: string;
+  major: string;
+  year_of_study: string;
+  graduation_year: string;
+  campus_location: string;
+}
+
 export interface UserProfile {
   user_id: string;
   year_of_study: string;
@@ -186,6 +233,11 @@ export interface UserProfile {
   delhi_region?: string;
   preferred_time_of_day?: string;
   onboarding_completed?: boolean;
+  graduation_year?: string;
+  bio?: string;
+  college_email?: string;
+  portfolio_links?: PortfolioLinks;
+  skills_portfolio?: SkillItem[];
   goals: string[];
   interests: string[];
   priorities?: {

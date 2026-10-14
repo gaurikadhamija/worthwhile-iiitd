@@ -1,5 +1,19 @@
 import React, { useState } from 'react';
-import { Bell, Sliders, CheckCircle2, ChevronDown, Menu, X } from 'lucide-react';
+import {
+  Bell,
+  Sliders,
+  CheckCircle2,
+  ChevronDown,
+  Menu,
+  X,
+  LogOut,
+  Edit3,
+  User,
+  ShieldCheck,
+  Award,
+  Building2,
+  GraduationCap
+} from 'lucide-react';
 import { useApp, NavigationPage } from '../context/AppContext.js';
 import { UserRole } from '../types/index.js';
 
@@ -15,12 +29,17 @@ export const Navbar: React.FC = () => {
     markNotificationAsRead,
     markAllNotificationsAsRead,
     setIsGoalsModalOpen,
-    setIsAuthModalOpen
+    setIsEditProfileOpen,
+    currentUser,
+    isAuthenticated,
+    logout,
+    setIsGuestPreview
   } = useApp();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [logoLoadError, setLogoLoadError] = useState(false);
 
   const navLinks: { label: string; page: NavigationPage }[] = [
@@ -32,12 +51,16 @@ export const Navbar: React.FC = () => {
     { label: 'Organizer Desk', page: 'organizer' }
   ];
 
+  const initials = currentUser?.name
+    ? currentUser.name.split(' ').map(n => n[0]).slice(0, 2).join('')
+    : 'W';
+
   return (
     <header className="sticky top-0 z-40 w-full bg-[#FFFDF8]/96 backdrop-blur-md border-b border-[#E2D7C8] shadow-[0_2px_12px_rgba(36,20,16,0.04)] transition-colors">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-6">
           
-          {/* ZONE 1: BRAND LOGO (Integrated Official WorthWhile Logo Emblem) */}
+          {/* ZONE 1: BRAND LOGO */}
           <div className="flex items-center shrink-0">
             <button
               onClick={() => navigateTo('discover')}
@@ -69,7 +92,7 @@ export const Navbar: React.FC = () => {
             </button>
           </div>
 
-          {/* ZONE 2: HIGH-CONTRAST SINGLE-LINE NAVIGATION LINKS */}
+          {/* ZONE 2: NAVIGATION LINKS */}
           <nav className="hidden lg:flex items-center gap-6 text-sm">
             {navLinks.map(link => {
               const isActive = activePage === link.page;
@@ -97,14 +120,14 @@ export const Navbar: React.FC = () => {
             })}
           </nav>
 
-          {/* ZONE 3: ACTIONS & UTILITIES WITH HIGH READABILITY */}
+          {/* ZONE 3: ACTIONS & USER PROFILE */}
           <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
             
             {/* Quick Goals Trigger Button */}
             <button
               onClick={() => setIsGoalsModalOpen(true)}
               className="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#D5C7B5] bg-[#F8F4EC] hover:bg-[#EFE5D5] text-xs font-bold text-[#241410] transition-colors whitespace-nowrap shadow-xs"
-              title="Calibrate semester goals to recalculate event fit scores"
+              title="Calibrate semester goals"
             >
               <Sliders className="w-3.5 h-3.5 text-[#5B2435]" />
               <span>My Goals</span>
@@ -123,7 +146,7 @@ export const Navbar: React.FC = () => {
               </button>
 
               {roleMenuOpen && (
-                <div className="absolute right-0 mt-1.5 w-40 rounded-xl bg-[#FFFDF8] border border-[#D5C7B5] shadow-xl py-1 z-50 animate-fadeIn">
+                <div className="absolute right-0 mt-1.5 w-44 rounded-xl bg-[#FFFDF8] border border-[#D5C7B5] shadow-xl py-1 z-50 animate-fadeIn">
                   {(['student', 'organizer'] as UserRole[]).map(role => (
                     <button
                       key={role}
@@ -139,7 +162,10 @@ export const Navbar: React.FC = () => {
                           : 'text-[#241410] hover:bg-[#FAF4EB]'
                       }`}
                     >
-                      <span>{role} Perspective</span>
+                      <span className="flex items-center gap-2">
+                        {role === 'student' ? <GraduationCap className="w-3.5 h-3.5" /> : <Building2 className="w-3.5 h-3.5" />}
+                        <span>{role} Perspective</span>
+                      </span>
                       {currentUserRole === role && <CheckCircle2 className="w-3.5 h-3.5 text-[#5B2435]" />}
                     </button>
                   ))}
@@ -224,28 +250,96 @@ export const Navbar: React.FC = () => {
               )}
             </div>
 
-            {/* Profile Avatar / Portfolio Link */}
-            <button
-              onClick={() => navigateTo('myevents')}
-              className="flex items-center gap-2 p-1 rounded-lg hover:bg-[#F8F4EC] transition-colors"
-              title="View your verified activity transcript"
-            >
-              <div className="w-8 h-8 rounded-full bg-[#E2D7C8] flex items-center justify-center text-[#5B2435] border border-[#CFC1AF] text-xs font-bold font-serif">
-                AC
-              </div>
-              <span className="hidden sm:inline text-xs font-bold text-[#241410]">
-                Alex Chen
-              </span>
-            </button>
+            {/* Authenticated User Menu or Guest Sign In */}
+            {isAuthenticated && currentUser ? (
+              <div className="relative">
+                <button
+                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  className="flex items-center gap-2 p-1 rounded-xl hover:bg-[#F8F4EC] transition-colors"
+                  aria-label="User Account"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#5B2435] to-[#30231F] text-[#FFFDF8] flex items-center justify-center font-serif text-xs font-bold shadow-xs">
+                    {initials}
+                  </div>
+                  <div className="hidden sm:flex flex-col text-left">
+                    <span className="text-xs font-bold text-[#241410] leading-tight truncate max-w-[110px]">
+                      {currentUser.name}
+                    </span>
+                    <span className="text-[9.5px] font-mono font-semibold text-[#5B2435] uppercase tracking-wider capitalize">
+                      {currentUser.role}
+                    </span>
+                  </div>
+                  <ChevronDown className="w-3 h-3 text-[#7A6860] hidden sm:block" />
+                </button>
 
-            {/* Quick Auth / Account trigger */}
-            <button
-              onClick={() => setIsAuthModalOpen(true)}
-              className="hidden xl:inline-flex items-center px-2.5 py-1.5 rounded-lg border border-[#D5C7B5] bg-[#FFFDF8] hover:bg-[#F8F4EC] text-xs font-bold text-[#5B2435] transition-colors"
-              title="Sign in or create account"
-            >
-              Sign In
-            </button>
+                {userDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-[#FFFDF8] border border-[#D5C7B5] shadow-2xl p-2 z-50 animate-fadeIn text-xs">
+                    <div className="px-3 py-2.5 border-b border-[#E2D7C8] mb-1">
+                      <p className="font-bold text-[#241410]">{currentUser.name}</p>
+                      <p className="text-[10px] text-[#7A6860] font-mono truncate">{currentUser.email}</p>
+                      <span className="mt-1 inline-block text-[9.5px] font-mono font-bold uppercase tracking-wider text-[#194D33] bg-[#194D33]/10 px-2 py-0.2 rounded">
+                        Active {currentUser.role}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setUserDropdownOpen(false);
+                        navigateTo('myevents');
+                      }}
+                      className="w-full px-3 py-2 text-left rounded-lg hover:bg-[#F8F4EC] flex items-center gap-2 text-[#241410]"
+                    >
+                      <Award className="w-3.5 h-3.5 text-[#5B2435]" />
+                      <span>My Portfolio & Transcript</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setUserDropdownOpen(false);
+                        setIsEditProfileOpen(true);
+                      }}
+                      className="w-full px-3 py-2 text-left rounded-lg hover:bg-[#F8F4EC] flex items-center gap-2 text-[#241410]"
+                    >
+                      <Edit3 className="w-3.5 h-3.5 text-[#5B2435]" />
+                      <span>Edit Student Profile</span>
+                    </button>
+
+                    {currentUser.role === 'organizer' && (
+                      <button
+                        onClick={() => {
+                          setUserDropdownOpen(false);
+                          navigateTo('organizer');
+                        }}
+                        className="w-full px-3 py-2 text-left rounded-lg hover:bg-[#F8F4EC] flex items-center gap-2 text-[#241410] font-bold text-[#5B2435]"
+                      >
+                        <Building2 className="w-3.5 h-3.5 text-[#5B2435]" />
+                        <span>Organizer Desk & Check-in</span>
+                      </button>
+                    )}
+
+                    <div className="pt-1 mt-1 border-t border-[#E2D7C8]">
+                      <button
+                        onClick={() => {
+                          setUserDropdownOpen(false);
+                          logout();
+                        }}
+                        className="w-full px-3 py-2 text-left rounded-lg hover:bg-[#5B2435]/10 flex items-center gap-2 text-[#5B2435] font-bold"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        <span>Sign Out</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsGuestPreview(false)}
+                className="px-3.5 py-1.5 rounded-xl bg-[#5B2435] text-[#FFFDF8] hover:bg-[#3F1723] text-xs font-bold uppercase tracking-wider transition-colors shadow-xs"
+              >
+                Sign In
+              </button>
+            )}
 
             {/* Mobile Menu Hamburger */}
             <button
@@ -278,25 +372,37 @@ export const Navbar: React.FC = () => {
               {link.label}
             </button>
           ))}
-          <div className="pt-3 border-t border-[#E2D7C8] flex gap-2">
+          <div className="pt-3 border-t border-[#E2D7C8] flex flex-col gap-2">
             <button
               onClick={() => {
                 setIsGoalsModalOpen(true);
                 setMobileMenuOpen(false);
               }}
-              className="flex-1 py-2 text-center text-xs font-bold rounded-lg bg-[#5B2435] text-[#FFFDF8]"
+              className="w-full py-2 text-center text-xs font-bold rounded-lg bg-[#5B2435] text-[#FFFDF8]"
             >
               Semester Goals
             </button>
-            <button
-              onClick={() => {
-                setCurrentUserRole(currentUserRole === 'student' ? 'organizer' : 'student');
-                setMobileMenuOpen(false);
-              }}
-              className="px-3 py-2 text-xs font-bold rounded-lg border border-[#D5C7B5] text-[#241410] bg-[#FFFDF8]"
-            >
-              Role: {currentUserRole}
-            </button>
+            {isAuthenticated ? (
+              <button
+                onClick={() => {
+                  logout();
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full py-2 text-center text-xs font-bold rounded-lg border border-[#D5C7B5] text-[#5B2435]"
+              >
+                Sign Out ({currentUser?.name})
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setIsGuestPreview(false);
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full py-2 text-center text-xs font-bold rounded-lg bg-[#5B2435] text-[#FFFDF8]"
+              >
+                Sign In / Register
+              </button>
+            )}
           </div>
         </div>
       )}

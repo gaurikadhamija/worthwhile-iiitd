@@ -1,4 +1,9 @@
+import crypto from 'node:crypto';
 import { db } from './connection.js';
+
+function hashPassword(password: string, salt: string): string {
+  return crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+}
 
 export function initializeSchema() {
   db.exec(`
@@ -270,6 +275,8 @@ export function initializeSchema() {
   ensureColumn('users', 'session_token', 'TEXT');
   ensureColumn('users', 'reset_token', 'TEXT');
   ensureColumn('users', 'reset_expires', 'TEXT');
+  ensureColumn('users', 'status', "TEXT NOT NULL DEFAULT 'active'");
+  ensureColumn('users', 'organization_name', 'TEXT');
 
   // Ensure profiles columns
   ensureColumn('profiles', 'delhi_region', "TEXT NOT NULL DEFAULT 'South Delhi'");
@@ -278,6 +285,15 @@ export function initializeSchema() {
   ensureColumn('profiles', 'preferred_time_of_day', "TEXT NOT NULL DEFAULT 'Afternoon & Evening'");
   ensureColumn('profiles', 'onboarding_completed', "INTEGER NOT NULL DEFAULT 1");
   ensureColumn('profiles', 'priorities_json', "TEXT NOT NULL DEFAULT '{\"career\": 35, \"learning\": 25, \"networking\": 20, \"convenience\": 10, \"fun\": 10}'");
+  ensureColumn('profiles', 'graduation_year', "TEXT NOT NULL DEFAULT '2026'");
+  ensureColumn('profiles', 'bio', "TEXT NOT NULL DEFAULT 'B.Tech Junior passionate about AI, distributed systems, and product engineering.'");
+  ensureColumn('profiles', 'college_email', "TEXT");
+  ensureColumn('profiles', 'portfolio_links_json', `TEXT NOT NULL DEFAULT '{"github":"https://github.com/alexchen-dev","linkedin":"https://linkedin.com/in/alexchen-campus","website":"https://alexchen.dev"}'`);
+  ensureColumn('profiles', 'skills_portfolio_json', "TEXT NOT NULL DEFAULT '[]'");
+
+  // Ensure organizers columns
+  ensureColumn('organizers', 'status', "TEXT NOT NULL DEFAULT 'approved'");
+  ensureColumn('organizers', 'owner_user_id', 'TEXT');
 
   applyTrustMigrations();
 }
@@ -324,6 +340,132 @@ export function applyTrustMigrations() {
   }
 
   db.exec(`UPDATE organizers SET owner_user_id = 'usr_organizer_acm' WHERE id = 'org_acm' AND owner_user_id IS NULL`);
+
+  // Ensure demo accounts have valid password hashes (Demo2026!) so email+password and demo login both work
+  try {
+    const demoSalt = '7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c';
+    const demoHash = hashPassword('Demo2026!', demoSalt);
+    db.prepare(`
+      UPDATE users SET salt = COALESCE(salt, ?), password_hash = COALESCE(password_hash, ?)
+      WHERE id IN ('usr_demo_student', 'usr_organizer_acm', 'usr_admin_dean')
+    `).run(demoSalt, demoHash);
+  } catch (e) {
+    // ignore
+  }
+
+  // Ensure student profile has initial skills portfolio if empty
+  try {
+    const p = db.prepare('SELECT skills_portfolio_json FROM profiles WHERE user_id = ?').get('usr_demo_student') as any;
+    if (!p || !p.skills_portfolio_json || p.skills_portfolio_json === '[]') {
+      const initialSkills = [
+        {
+          id: 'sk_1',
+          name: 'Python & PyTorch',
+          category: 'technical',
+          proficiency: 'advanced',
+          evidenceUrl: 'https://github.com/alexchen-dev/distributed-rag',
+          evidenceNotes: 'Implemented transformer attention heads and quantization pipeline',
+          isVerified: true,
+          verifiedSource: 'GenAI Architecture Masterclass (ACM)'
+        },
+        {
+          id: 'sk_2',
+          name: 'Distributed Systems & Go',
+          category: 'technical',
+          proficiency: 'intermediate',
+          evidenceUrl: 'https://github.com/alexchen-dev/raft-kv',
+          evidenceNotes: 'Built Raft consensus algorithm with leader election and log replication',
+          isVerified: false
+        },
+        {
+          id: 'sk_3',
+          name: 'Full-Stack TypeScript & React',
+          category: 'technical',
+          proficiency: 'advanced',
+          evidenceUrl: 'https://alexchen.dev',
+          evidenceNotes: 'Built campus navigation and real-time scheduling apps',
+          isVerified: true,
+          verifiedSource: 'HackIITD 2025 Winner'
+        },
+        {
+          id: 'sk_4',
+          name: 'Technical Writing & Documentation',
+          category: 'leadership',
+          proficiency: 'advanced',
+          evidenceUrl: 'https://medium.com/@alexchen/raft-deep-dive',
+          evidenceNotes: 'Published technical tutorials read by 15,000+ campus engineers',
+          isVerified: false
+        },
+        {
+          id: 'sk_5',
+          name: 'Product Design & Design Systems',
+          category: 'creative',
+          proficiency: 'intermediate',
+          evidenceUrl: 'https://figma.com/@alexchen',
+          evidenceNotes: 'Designed accessible campus UI library and Figma design tokens',
+          isVerified: false
+        },
+        {
+          id: 'sk_6',
+          name: 'Public Speaking & Tech Demos',
+          category: 'leadership',
+          proficiency: 'intermediate',
+          evidenceNotes: 'Presented live API live-coding demo to 120+ attendees at ACM Salon',
+          isVerified: true,
+          verifiedSource: 'Verified by ACM Student Chapter'
+        }
+      ];
+
+      db.prepare(`
+        UPDATE profiles SET
+          skills_portfolio_json = ?,
+          bio = COALESCE(NULLIF(bio, ''), 'B.Tech Junior passionate about AI, distributed systems, and product engineering.'),
+          graduation_year = COALESCE(NULLIF(graduation_year, ''), '2026'),
+          college_email = COALESCE(college_email, 'alex.chen@campus.edu'),
+          portfolio_links_json = COALESCE(NULLIF(portfolio_links_json, ''), '{"github":"https://github.com/alexchen-dev","linkedin":"https://linkedin.com/in/alexchen-campus","website":"https://alexchen.dev"}')
+        WHERE user_id = 'usr_demo_student'
+      `).run(JSON.stringify(initialSkills));
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  // Ensure attendees exist for ACM events so organizer attendee desk has actionable records
+  try {
+    // Add additional sample student for attendee check-in demonstration
+    const sampleAttendeeId = 'usr_student_rohit';
+    const exists = db.prepare('SELECT id FROM users WHERE id = ?').get(sampleAttendeeId);
+    if (!exists) {
+      db.prepare(`
+        INSERT INTO users (id, email, name, role, avatar_url, created_at, is_demo)
+        VALUES (?, ?, ?, 'student', ?, datetime('now'), 0)
+      `).run(
+        sampleAttendeeId,
+        'rohit.sharma@iiitd.ac.in',
+        'Rohit Sharma',
+        'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=300&q=80'
+      );
+
+      db.prepare(`
+        INSERT OR IGNORE INTO profiles (user_id, year_of_study, degree, major, campus_location, delhi_region, onboarding_completed, goals_json, interests_json, priorities_json, career_interests_json, preferred_event_types_json)
+        VALUES (?, 'Sophomore (2nd Year)', 'B.Tech', 'Computer Science & Biosciences', 'Okhla (IIIT Delhi)', 'South Delhi', 1, '[]', '[]', '{}', '[]', '[]')
+      `).run(sampleAttendeeId);
+    }
+
+    // Register Rohit for evt_genai_masterclass (registered, not checked in yet)
+    db.prepare(`
+      INSERT OR IGNORE INTO event_registrations (id, event_id, user_id, registered_at, attended)
+      VALUES ('reg_rohit_genai', 'evt_genai_masterclass', ?, datetime('now', '-2 days'), 0)
+    `).run(sampleAttendeeId);
+
+    // Ensure usr_demo_student is registered and checked in for evt_genai_masterclass
+    db.prepare(`
+      INSERT OR REPLACE INTO event_registrations (id, event_id, user_id, registered_at, attended, attendance_source, checked_in_by, checked_in_at)
+      VALUES ('reg_alex_genai', 'evt_genai_masterclass', 'usr_demo_student', datetime('now', '-3 days'), 1, 'organizer_checkin', 'usr_organizer_acm', datetime('now', '-1 days'))
+    `).run();
+  } catch (e) {
+    // ignore
+  }
 
   // Remove duplicate reviews/evidence (legacy bug allowed them), keeping the earliest, then enforce uniqueness in the DB.
   db.exec(`

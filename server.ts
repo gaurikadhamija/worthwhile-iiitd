@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { seedDatabase } from './src/backend/db/seed.js';
@@ -10,9 +11,19 @@ import { apiRouter } from './src/backend/routes/api.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Support platform-provided PORT (e.g. on Render, Fly.io, Railway) with 3000 fallback
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
-const HOST = process.env.HOST || '0.0.0.0';
+// Helper to parse CLI flags like --port 3000 --host 0.0.0.0
+function getCliArg(flag: string): string | undefined {
+  const index = process.argv.indexOf(flag);
+  if (index !== -1 && index + 1 < process.argv.length) {
+    return process.argv[index + 1];
+  }
+  return undefined;
+}
+
+const cliPort = getCliArg('--port');
+const cliHost = getCliArg('--host');
+const PORT = cliPort ? parseInt(cliPort, 10) : (process.env.PORT ? parseInt(process.env.PORT, 10) : 3000);
+const HOST = cliHost || process.env.HOST || '0.0.0.0';
 
 async function startServer() {
   const app = express();
@@ -78,6 +89,21 @@ async function startServer() {
       appType: 'spa',
     });
     app.use(vite.middlewares);
+
+    // Explicit fallback for client SPA navigation
+    app.use('*', async (req, res, next) => {
+      const url = req.originalUrl;
+      if (url.startsWith('/api') || url.includes('.')) {
+        return next();
+      }
+      try {
+        const rawHtml = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8');
+        const transformedHtml = await vite.transformIndexHtml(url, rawHtml);
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(transformedHtml);
+      } catch (err) {
+        next(err);
+      }
+    });
   } else {
     // In production: serve static built files
     const distPath = path.resolve(__dirname, 'dist');

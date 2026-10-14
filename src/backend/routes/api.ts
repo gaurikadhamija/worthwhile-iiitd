@@ -41,11 +41,11 @@ function sendError(res: Response, err: any, fallbackStatus: number) {
 // -------------------------------------------------------------
 apiRouter.post('/auth/signup', (req: Request, res: Response) => {
   try {
-    const { email, password, name, role, delhi_region } = req.body;
+    const { email, password, name, role, delhi_region, organization_name } = req.body;
     if (!email || !password || !name) {
       return res.status(400).json({ success: false, error: 'Name, email, and password are required.' });
     }
-    const session = AuthService.signup({ email, password, name, role, delhi_region });
+    const session = AuthService.signup({ email, password, name, role, delhi_region, organization_name });
     res.status(201).json({ success: true, data: session });
   } catch (err: any) {
     sendError(res, err, 400);
@@ -62,6 +62,16 @@ apiRouter.post('/auth/login', (req: Request, res: Response) => {
     res.json({ success: true, data: session });
   } catch (err: any) {
     sendError(res, err, 401);
+  }
+});
+
+apiRouter.post('/auth/demo-login', (req: Request, res: Response) => {
+  try {
+    const role = req.body?.role === 'organizer' ? 'organizer' : 'student';
+    const session = AuthService.demoLogin(role);
+    res.json({ success: true, data: session });
+  } catch (err: any) {
+    sendError(res, err, 400);
   }
 });
 
@@ -472,6 +482,17 @@ apiRouter.post('/events/:id/attendance', (req: Request, res: Response) => {
   }
 });
 
+// Organizer/admin-only: list all registered students for an event with check-in status
+apiRouter.get('/events/:id/attendees', (req: Request, res: Response) => {
+  try {
+    requireEventManager(req, req.params.id);
+    const attendees = UserService.getEventAttendees(req.params.id);
+    res.json({ success: true, count: attendees.length, data: attendees });
+  } catch (err: any) {
+    sendError(res, err, 500);
+  }
+});
+
 // -------------------------------------------------------------
 // REVIEWS
 // -------------------------------------------------------------
@@ -540,6 +561,16 @@ apiRouter.post('/events/:id/register', (req: Request, res: Response) => {
   }
 });
 
+apiRouter.delete('/events/:id/register', (req: Request, res: Response) => {
+  try {
+    const userId = getCurrentUserId(req);
+    const result = UserService.cancelRegistration(userId, req.params.id);
+    res.json({ success: true, data: result });
+  } catch (err: any) {
+    sendError(res, err, 500);
+  }
+});
+
 // -------------------------------------------------------------
 // USER PROFILE & GOALS & ACTIVITY
 // -------------------------------------------------------------
@@ -558,6 +589,20 @@ apiRouter.put('/user/profile', (req: Request, res: Response) => {
   try {
     const userId = getCurrentUserId(req);
     const updated = UserService.updateProfile(userId, req.body);
+    res.json({ success: true, data: updated });
+  } catch (err: any) {
+    sendError(res, err, 400);
+  }
+});
+
+apiRouter.put('/user/skills', (req: Request, res: Response) => {
+  try {
+    const userId = getCurrentUserId(req);
+    const { skills } = req.body;
+    if (!Array.isArray(skills)) {
+      return res.status(400).json({ success: false, error: 'skills must be an array' });
+    }
+    const updated = UserService.updateSkillsPortfolio(userId, skills);
     res.json({ success: true, data: updated });
   } catch (err: any) {
     sendError(res, err, 400);

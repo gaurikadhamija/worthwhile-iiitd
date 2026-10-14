@@ -1,4 +1,5 @@
 import { EventItem, UserProfile, Notification, RelevanceBreakdown } from '../types/index.js';
+import { safeStorage } from '../utils/storage.js';
 
 // Supports relative /api (local Vite dev & Vercel proxy rewrites)
 // and absolute backend origins (via VITE_API_URL or VITE_API_BASE_URL in Vercel)
@@ -9,13 +10,13 @@ const API_BASE = normalizedBase
   : '/api';
 
 function getAuthHeader(): Record<string, string> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('worthwhile_token') : null;
+  const token = safeStorage.getItem('worthwhile_token');
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
 export const api = {
   // Auth
-  async signup(data: { email: string; password: string; name: string; role?: string; delhi_region?: string }): Promise<any> {
+  async signup(data: { email: string; password: string; name: string; role?: string; delhi_region?: string; organization_name?: string }): Promise<any> {
     const res = await fetch(`${API_BASE}/auth/signup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -24,7 +25,7 @@ export const api = {
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || 'Failed to sign up');
     if (json.data?.token) {
-      localStorage.setItem('worthwhile_token', json.data.token);
+      safeStorage.setItem('worthwhile_token', json.data.token);
     }
     return json.data;
   },
@@ -38,7 +39,21 @@ export const api = {
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || 'Failed to sign in');
     if (json.data?.token) {
-      localStorage.setItem('worthwhile_token', json.data.token);
+      safeStorage.setItem('worthwhile_token', json.data.token);
+    }
+    return json.data;
+  },
+
+  async demoLogin(role: 'student' | 'organizer'): Promise<any> {
+    const res = await fetch(`${API_BASE}/auth/demo-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Demo login failed');
+    if (json.data?.token) {
+      safeStorage.setItem('worthwhile_token', json.data.token);
     }
     return json.data;
   },
@@ -53,7 +68,7 @@ export const api = {
     const json = await res.json();
     if (!res.ok) throw new Error(json.error || 'Failed to sign in with Google');
     if (json.data?.token) {
-      localStorage.setItem('worthwhile_token', json.data.token);
+      safeStorage.setItem('worthwhile_token', json.data.token);
     }
     return json.data;
   },
@@ -68,11 +83,15 @@ export const api = {
   },
 
   async logout(): Promise<void> {
-    await fetch(`${API_BASE}/auth/logout`, {
-      method: 'POST',
-      headers: { ...getAuthHeader() },
-    });
-    localStorage.removeItem('worthwhile_token');
+    try {
+      await fetch(`${API_BASE}/auth/logout`, {
+        method: 'POST',
+        headers: { ...getAuthHeader() },
+      });
+    } catch {
+      // Ignore network errors on logout
+    }
+    safeStorage.removeItem('worthwhile_token');
   },
 
   async forgotPassword(email: string): Promise<any> {
@@ -296,12 +315,44 @@ export const api = {
     return json.data;
   },
 
+  async cancelRegistration(eventId: string): Promise<{ success: boolean; registered: boolean }> {
+    const res = await fetch(`${API_BASE}/events/${eventId}/register`, {
+      method: 'DELETE',
+      headers: { ...getAuthHeader() },
+    });
+    if (!res.ok) throw new Error('Failed to cancel registration');
+    const json = await res.json();
+    return json.data;
+  },
+
   // User Profile & Activity
   async getUserProfile(): Promise<{ user: any; profile: UserProfile }> {
     const res = await fetch(`${API_BASE}/user/profile`, {
       headers: { ...getAuthHeader() },
     });
     if (!res.ok) throw new Error('Failed to fetch profile');
+    const json = await res.json();
+    return json.data;
+  },
+
+  async updateProfile(updates: Partial<UserProfile>): Promise<UserProfile> {
+    const res = await fetch(`${API_BASE}/user/profile`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify(updates),
+    });
+    if (!res.ok) throw new Error('Failed to update profile');
+    const json = await res.json();
+    return json.data;
+  },
+
+  async updateSkills(skills: any[]): Promise<UserProfile> {
+    const res = await fetch(`${API_BASE}/user/skills`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify({ skills }),
+    });
+    if (!res.ok) throw new Error('Failed to update skills');
     const json = await res.json();
     return json.data;
   },
@@ -326,12 +377,33 @@ export const api = {
     return json.data;
   },
 
-  // Organizer Dashboard
-  async getOrganizerDashboard(organizerId: string = 'org_acm'): Promise<any> {
-    const res = await fetch(`${API_BASE}/organizer/dashboard?organizer_id=${organizerId}`, {
+  // Organizer Desk & Attendee Management
+  async getOrganizerDashboard(organizerId?: string): Promise<any> {
+    const url = organizerId ? `${API_BASE}/organizer/dashboard?organizer_id=${encodeURIComponent(organizerId)}` : `${API_BASE}/organizer/dashboard`;
+    const res = await fetch(url, {
       headers: { ...getAuthHeader() },
     });
     if (!res.ok) throw new Error('Failed to fetch organizer dashboard');
+    const json = await res.json();
+    return json.data;
+  },
+
+  async getEventAttendees(eventId: string): Promise<any[]> {
+    const res = await fetch(`${API_BASE}/events/${eventId}/attendees`, {
+      headers: { ...getAuthHeader() },
+    });
+    if (!res.ok) throw new Error('Failed to fetch attendees');
+    const json = await res.json();
+    return json.data;
+  },
+
+  async markAttendance(eventId: string, userId: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/events/${eventId}/attendance`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...getAuthHeader() },
+      body: JSON.stringify({ user_id: userId }),
+    });
+    if (!res.ok) throw new Error('Failed to record attendance');
     const json = await res.json();
     return json.data;
   },
