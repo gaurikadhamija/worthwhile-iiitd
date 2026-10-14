@@ -1,13 +1,78 @@
 export type UserRole = 'student' | 'organizer' | 'admin';
 
+export type StudentVerificationStatus = 'unverified' | 'pending' | 'verified' | 'rejected' | 'info_requested' | 'suspended';
+export type OrganiserApprovalStatus = 'pending_approval' | 'approved' | 'rejected' | 'suspended';
+
 export interface User {
   id: string;
   email: string;
   name: string;
   role: UserRole;
   avatar_url?: string;
-  status?: 'active' | 'pending_approval';
+  status?: 'active' | 'pending_approval' | 'suspended';
   organization_name?: string;
+  student_verification_status?: StudentVerificationStatus;
+  organiser_approval_status?: OrganiserApprovalStatus;
+  is_verification_reviewer?: boolean;
+  verification_rejection_reason?: string;
+  verification_info_request?: string;
+  created_at: string;
+}
+
+export interface StudentVerification {
+  id: string;
+  user_id: string;
+  student_name: string;
+  college_email: string;
+  institution: string;
+  department: string;
+  academic_year: string;
+  student_id_number?: string;
+  verification_method: 'institutional_email' | 'student_id_card' | 'admission_letter' | 'digilocker_credential';
+  document_name?: string;
+  document_url?: string;
+  status: 'pending' | 'approved' | 'rejected' | 'info_requested';
+  status_reason?: string;
+  reviewed_by?: string;
+  reviewed_by_name?: string;
+  reviewed_at?: string;
+  submitted_at: string;
+  updated_at: string;
+  history?: Array<{
+    action: string;
+    actor_id: string;
+    actor_name?: string;
+    timestamp: string;
+    reason?: string;
+  }>;
+}
+
+export interface OrganiserRequest {
+  id: string;
+  user_id: string;
+  applicant_name: string;
+  official_email: string;
+  institution: string;
+  organization_name: string;
+  role_title: string;
+  responsibilities: string;
+  status: OrganiserApprovalStatus;
+  status_reason?: string;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  submitted_at: string;
+  updated_at: string;
+}
+
+export interface AuditLogItem {
+  id: string;
+  actor_id: string;
+  actor_name?: string;
+  actor_role?: string;
+  action: string;
+  target_type: string;
+  target_id: string;
+  details?: any;
   created_at: string;
 }
 

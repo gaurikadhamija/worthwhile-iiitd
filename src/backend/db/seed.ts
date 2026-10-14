@@ -5,14 +5,7 @@ export function seedDatabase(force = false) {
   initializeSchema();
 
   const isProduction = process.env.NODE_ENV === 'production';
-  const userCount = (db.prepare('SELECT COUNT(*) as count FROM users').get() as { count: number }).count;
-  const eventCount = (db.prepare('SELECT COUNT(*) as count FROM events').get() as { count: number }).count;
   
-  // PRESERVE AND PROTECT: If database already contains data, do NOT clear or overwrite
-  if (userCount > 0 && eventCount > 0 && !force) {
-    return; // Already populated. Safely preserve existing production and campus records.
-  }
-
   // Strictly forbid destructive clearing in production
   if (force && !isProduction && process.env.ALLOW_DATABASE_RESET === 'true') {
     db.exec(`
@@ -30,24 +23,23 @@ export function seedDatabase(force = false) {
       DELETE FROM profiles;
       DELETE FROM users;
     `);
-  } else if (userCount > 0) {
-    // If table already has data and not resetting, preserve existing data without throwing duplicate key errors
-    return;
   }
 
-  // 1. Seed Users
+  // 1. Seed Users (INSERT OR IGNORE preserves existing credentials and status)
   const insertUser = db.prepare(`
-    INSERT INTO users (id, email, name, role, avatar_url, created_at)
+    INSERT OR IGNORE INTO users (id, email, name, role, avatar_url, created_at)
     VALUES (?, ?, ?, ?, ?, datetime('now'))
   `);
 
   insertUser.run('usr_demo_student', 'alex.chen@campus.edu', 'Alex Chen', 'student', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80');
   insertUser.run('usr_organizer_acm', 'acm-lead@campus.edu', 'Sarah Lin (ACM President)', 'organizer', 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80');
   insertUser.run('usr_admin_dean', 'studentlife-admin@campus.edu', 'Dean of Student Life', 'admin', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80');
+  insertUser.run('usr_student_rohit', 'rohit.sharma@iiitd.ac.in', 'Rohit Sharma', 'student', 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=300&q=80');
+  insertUser.run('usr_student_priya', 'priya.verma@dtu.ac.in', 'Priya Verma', 'student', 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80');
 
   // 2. Seed Student Profile
   const insertProfile = db.prepare(`
-    INSERT INTO profiles (
+    INSERT OR IGNORE INTO profiles (
       user_id, year_of_study, degree, major, free_hours_per_week,
       commute_mode, campus_location, goals_json, interests_json,
       career_interests_json, preferred_event_types_json, preferred_duration_max, preferred_distance_max
@@ -72,7 +64,7 @@ export function seedDatabase(force = false) {
 
   // 3. Seed Venues (Delhi / NCR Campuses & Cultural Centers)
   const insertVenue = db.prepare(`
-    INSERT INTO venues (id, name, building, room, campus_zone, address, place_id, city_region, latitude, longitude, map_x, map_y, capacity, wheelchair_accessible)
+    INSERT OR IGNORE INTO venues (id, name, building, room, campus_zone, address, place_id, city_region, latitude, longitude, map_x, map_y, capacity, wheelchair_accessible)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
@@ -96,7 +88,7 @@ export function seedDatabase(force = false) {
 
   // 4. Seed Organizers
   const insertOrganizer = db.prepare(`
-    INSERT INTO organizers (id, name, slug, type, verified, trust_score, historical_events_count, avg_punctuality_rating, description, contact_email)
+    INSERT OR IGNORE INTO organizers (id, name, slug, type, verified, trust_score, historical_events_count, avg_punctuality_rating, description, contact_email)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
@@ -117,7 +109,7 @@ export function seedDatabase(force = false) {
 
   // 5. Seed Events (20 rich, realistic campus events)
   const insertEvent = db.prepare(`
-    INSERT INTO events (
+    INSERT OR IGNORE INTO events (
       id, title, slug, tagline, description, category, organizer_id, venue_id,
       start_time, end_time, cost_cents, is_free, cover_image, max_capacity,
       certificate_offered, networking_potential, career_value_rating, learning_value_rating,
@@ -640,7 +632,7 @@ export function seedDatabase(force = false) {
 
   // 6. Seed Event Outcomes
   const insertOutcome = db.prepare(`
-    INSERT INTO event_outcomes (id, event_id, outcome_type, title, description, highlight)
+    INSERT OR IGNORE INTO event_outcomes (id, event_id, outcome_type, title, description, highlight)
     VALUES (?, ?, ?, ?, ?, ?)
   `);
 
@@ -675,7 +667,7 @@ export function seedDatabase(force = false) {
 
   // 7. Seed Organizer Claims & Student Evidence (Critical for "Organizer Says vs Students Report")
   const insertClaim = db.prepare(`
-    INSERT INTO organizer_claims (
+    INSERT OR IGNORE INTO organizer_claims (
       id, event_id, claim_text, claim_category, promised_outcome,
       verification_status, evidence_score, student_sample_size, notes
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -706,7 +698,7 @@ export function seedDatabase(force = false) {
 
   // 8. Seed Event Analytics & Behavioral Signals
   const insertAnalytics = db.prepare(`
-    INSERT INTO event_analytics (
+    INSERT OR IGNORE INTO event_analytics (
       event_id, seats_total, seats_registered, seats_attended_live,
       attendance_rate_pct, delay_minutes_avg, peak_queue_time, demand_level, signal_type
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -742,7 +734,7 @@ export function seedDatabase(force = false) {
 
   // 9. Seed Reviews (DEMO sample reviews; never attendance-verified)
   const insertReview = db.prepare(`
-    INSERT INTO reviews (
+    INSERT OR IGNORE INTO reviews (
       id, event_id, user_id, user_name, user_degree, is_verified_attendee,
       rating_overall, rating_content, rating_speaker, rating_networking,
       rating_time_spent, rating_logistics, comment, tags_json, created_at
@@ -773,7 +765,7 @@ export function seedDatabase(force = false) {
 
   // 10. Seed Saved Events for demo student
   const insertSaved = db.prepare(`
-    INSERT INTO saved_events (id, user_id, event_id, saved_at)
+    INSERT OR IGNORE INTO saved_events (id, user_id, event_id, saved_at)
     VALUES (?, ?, ?, datetime('now', '-1 day'))
   `);
 
@@ -783,7 +775,7 @@ export function seedDatabase(force = false) {
 
   // 11. Seed Registrations
   const insertReg = db.prepare(`
-    INSERT INTO event_registrations (id, event_id, user_id, registered_at, attended, checked_in_at)
+    INSERT OR IGNORE INTO event_registrations (id, event_id, user_id, registered_at, attended, checked_in_at)
     VALUES (?, ?, ?, datetime('now', '-2 days'), ?, ?)
   `);
 
@@ -792,7 +784,7 @@ export function seedDatabase(force = false) {
 
   // 12. Seed Notifications
   const insertNotif = db.prepare(`
-    INSERT INTO notifications (id, user_id, title, message, type, event_id, read, created_at)
+    INSERT OR IGNORE INTO notifications (id, user_id, title, message, type, event_id, read, created_at)
     VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now', ?))
   `);
 
